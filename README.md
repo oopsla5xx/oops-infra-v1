@@ -1,54 +1,41 @@
 # oops-infra-v1
 
-Shared local dev/test infrastructure and (later) Terraform for the Oops platform.
+Shared local dev/test infrastructure and Terraform for the Oops platform. Cloned through the
+`oops-wiki-v1` workspace (`git submodule update --init`), not standalone.
 
-## Docker
+## Dev: Floci (AWS emulator)
 
-Two Compose files, no application images inside — just the shared services other repos connect to.
+`docker/dev/compose.yaml` runs [Floci](https://github.com/floci-io/floci), backing RDS PostgreSQL,
+ElastiCache Redis, and S3 — mirrors production, which runs the real thing (see
+[ADR-0003](../.ai/decisions/0003-floci-local-aws-emulation.md)). `terraform/local/` provisions the
+actual instances against it.
 
-### `docker/dev/compose.yaml`
-
-Long-running local dev containers, shared by `oops-api-v1` and `oops-agent-v1`.
+From `oops-api-v1`, `make dev-up` does both steps. Manually:
 
 ```bash
-docker compose -f docker/dev/compose.yaml up -d
+docker compose -f docker/dev/compose.yaml up -d --wait   # start Floci
+cd terraform/local && terraform init && terraform apply  # provision RDS/ElastiCache/S3
 ```
 
-| Service  | Port |
-|----------|------|
-| postgres | 5432 |
-| redis    | 6379 |
+| Port | What |
+|------|------|
+| `4566` | AWS API edge |
+| `7001-7099` | RDS proxy range |
+| `6379` | ElastiCache proxy — narrowed to the one instance provisioned; widen if a second is added |
 
-### `docker/test/compose.yaml`
+Endpoints are fixed (`localhost:7001`, `localhost:6379`) and already filled in in
+`oops-api-v1/.env.example` — see ADR-0003 for why that's safe to hardcode here. Terraform state is
+local-only, gitignored, never shared.
 
-Ephemeral, isolated containers for local test runs and CI parity.
+## Test: `docker/test/compose.yaml`
+
+Plain, ephemeral Postgres/Redis (no Floci) — fast, isolated, matches CI.
 
 ```bash
 docker compose -f docker/test/compose.yaml up -d --wait
 ```
 
-| Service       | Port |
-|---------------|------|
+| Service | Port |
+|---------|------|
 | postgres-test | 5433 |
-| redis-test    | 6380 |
-
-## Usage from a consuming repo
-
-`oops-api-v1` (and later `oops-agent-v1`) reference these compose files as a sibling submodule, e.g. from `oops-api-v1/Makefile`:
-
-```make
-docker-up:
-	docker compose -f ../oops-infra-v1/docker/dev/compose.yaml up -d
-```
-
-This requires cloning through the `oops-wiki-v1` workspace with submodules initialized:
-
-```bash
-git clone git@github.com:oopsla5xx/oops-wiki-v1.git
-cd oops-wiki-v1
-git submodule update --init
-```
-
-## Terraform
-
-Not set up yet — added when a real AWS environment needs managing (see `oops-wiki-v1/.ai/decisions/0002-shared-local-infra-in-oops-infra.md`).
+| redis-test | 6380 |

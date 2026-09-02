@@ -4,44 +4,38 @@ name: oops
 # Shared across oops-api-v1 and oops-agent-v1 — run once, both apps connect.
 # Run the API locally with: make dev (Air hot reload)
 # For test infrastructure, use: docker/test/compose.yaml
+#
+# Postgres and Redis are provisioned through Floci's RDS/ElastiCache emulation
+# (see ../terraform/local/), not run directly here — mirrors production, which
+# uses real RDS PostgreSQL + ElastiCache Redis + S3 (see ADR superseding 0002).
+# After `docker compose up -d`, run `make infra-apply` (oops-api-v1) to provision.
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: oops
-      POSTGRES_PASSWORD: oops
-      POSTGRES_DB: oops_development
+  floci:
+    image: floci/floci:2.0.1
+    user: "root"
     ports:
-      - "5432:5432"
-    volumes:
-      - postgres_dev_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U oops -d oops_development"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - oops-dev-network
-
-  redis:
-    image: redis:7-alpine
-    command: redis-server --appendonly yes
-    ports:
+      - "4566:4566"
+      - "7001-7099:7001-7099" # RDS proxy ports
       - "6379:6379"
     volumes:
-      - redis_dev_data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+      - floci_dev_data:/app/data
+    environment:
+      FLOCI_STORAGE_MODE: persistent
+      FLOCI_SERVICES_RDS_ENDPOINT_HOST: localhost
+      FLOCI_SERVICES_ELASTICACHE_PROXY_BASE_PORT: "6379"
+      FLOCI_SERVICES_ELASTICACHE_PROXY_MAX_PORT: "6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:4566/_localstack/health || exit 1"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
     networks:
       - oops-dev-network
 
 volumes:
-  postgres_dev_data:
-  redis_dev_data:
+  floci_dev_data:
 
 networks:
   oops-dev-network:
