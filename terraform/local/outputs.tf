@@ -1,6 +1,7 @@
 output "database_dsn" {
   description = "DATABASE_DSN shape used by oops-api-v1's .env.development — informational only (nothing reads this automatically); compare against the hardcoded value if something seems off"
   value       = "postgres://${aws_db_instance.postgres.username}:${aws_db_instance.postgres.password}@${aws_db_instance.postgres.address}:${aws_db_instance.postgres.port}/${aws_db_instance.postgres.db_name}?sslmode=disable"
+  sensitive   = true
 }
 
 output "redis_addr" {

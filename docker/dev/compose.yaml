@@ -19,6 +19,8 @@ services:
       - "7001-7099:7001-7099" # RDS proxy ports
       - "6379:6379"
     volumes:
+      # WARNING: grants floci root-equivalent control over the host (can start privileged
+      # containers, mount host paths) — required for Floci's container orchestration, dev-only.
       - /var/run/docker.sock:/var/run/docker.sock
       - floci_dev_data:/app/data
     environment:
