@@ -1,0 +1,4 @@
+# Terraform local state (never shared/remote — see ADR-0002 and its successor)
+**/.terraform/
+*.tfstate
+*.tfstate.backup
