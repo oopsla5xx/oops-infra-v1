@@ -6,9 +6,10 @@ Shared local dev/test infrastructure and Terraform for the Oops platform. Cloned
 ## Dev: Floci (AWS emulator)
 
 `docker/dev/compose.yaml` runs [Floci](https://github.com/floci-io/floci), backing RDS PostgreSQL,
-ElastiCache Redis, and S3 — mirrors production, which runs the real thing (see
-[ADR-0003](https://github.com/oopsla5xx/oops-wiki-v1/blob/main/.ai/decisions/0003-floci-local-aws-emulation.md)). `terraform/local/` provisions the
-actual instances against it.
+ElastiCache Redis, and S3 — mirrors production, which runs the real thing (original decision
+writeup, ADR-0003, is no longer in the working tree — findable only via `oops-wiki-v1` git
+history; see `oops-wiki-v1/docs/agent-context/authority.md` for where new decisions are recorded).
+`terraform/local/` provisions the actual instances against it.
 
 From `oops-api-v1`, `make dev-up` does both steps. Manually:
 
